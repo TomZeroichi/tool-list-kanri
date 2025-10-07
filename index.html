@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TOMツール一覧</title>
+<style>
+  :root{
+    --fx:#2563eb;        --fx-hover:#1d4ed8;
+    --mnp:#d97706;       --mnp-hover:#b45309;
+    --diag:#0ea5a4;      --diag-hover:#0b8b8a;
+    --manage:#6366f1;    --manage-hover:#4f46e5;
+    --account:#e11d48;   --account-hover:#be123c;
+    --retail:#16a34a;    --retail-hover:#15803d;
+    --salon:#c026d3;     --salon-hover:#a21caf;
+    --other:#334155;     --other-hover:#1f2937;
+    --fav:#f59e0b; --ink:#0f172a; --bg:#f9fafb;
+    --muted:#94a3b8; --ring:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family: "Noto Sans JP", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", Meiryo, sans-serif;
+    margin:20px; background:var(--bg); color:#111;
+  }
+  h1{ margin:0 0 6px }
+  h2{
+    margin-top:28px; border-left:6px solid #2563eb; padding-left:10px;
+    display:flex; align-items:center; gap:.5rem; cursor:pointer; user-select:none;
+  }
+  h2 .caret{ display:inline-block; transition:.2s transform; font-size:.9em }
+  h2.collapsed .caret{ transform:rotate(-90deg) }
+
+  /* サブカテゴリー見出し */
+  h3{
+    margin:14px 0 6px; padding:8px 10px; border-radius:10px; background:#ffffff; border:1px solid #e2e8f0;
+    display:flex; align-items:center; gap:.5rem; cursor:pointer; user-select:none; font-size:1rem;
+  }
+  h3 .caret{ display:inline-block; transition:.2s transform; font-size:.85em }
+  h3.collapsed .caret{ transform:rotate(-90deg) }
+  /* ジャンル色に合わせた左ボーダー */
+  h3.fx{ border-left:5px solid var(--fx) }
+  h3.mnp{ border-left:5px solid var(--mnp) }
+  h3.diag{ border-left:5px solid var(--diag) }
+  h3.manage{ border-left:5px solid var(--manage) }
+  h3.account{ border-left:5px solid var(--account) }
+  h3.retail{ border-left:5px solid var(--retail) }
+  h3.salon{ border-left:5px solid var(--salon) }
+  h3.other{ border-left:5px solid var(--other) }
+
+  small.help{ display:block; color:#475569; margin-bottom:8px }
+
+  /* 検索バー */
+  .searchbar{ margin:12px 0 16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .searchbox{ position:relative; flex:1 1 320px; }
+  .searchbox input{
+    width:100%; padding:12px 44px 12px 36px; border:1px solid var(--ring); border-radius:10px; background:#fff;
+    font-size:16px; outline:0;
+  }
+  .searchbox .icon{
+    position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:18px; color:var(--muted); pointer-events:none;
+  }
+  .searchbox .clear{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:6px; border:1px solid #e2e8f0; background:#f8fafc; cursor:pointer; font-size:16px; color:#475569;
+    display:grid; place-items:center;
+  }
+  .search-meta{ color:#64748b; font-size:.95rem }
+  .search-meta .count{ font-weight:700; color:#0f172a }
+
+  .btn-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:12px; margin:12px 0 18px;
+  }
+  .tool-card{ position:relative }
+  .tool-btn{
+    display:block; position:relative; text-align:center; color:#fff; padding:14px; border-radius:10px; text-decoration:none; font-weight:700;
+    box-shadow:0 2px 6px rgba(0,0,0,.1); transition:transform .2s ease, background-color .2s ease, filter .2s ease;
+    filter:saturate(1.05); min-height:48px;
+  }
+  .tool-btn:hover{ transform:translateY(-2px) }
+
+  /* ジャンル別カラー（ボタン） */
+  .btn--fx     { background:var(--fx) }     .btn--fx:hover     { background:var(--fx-hover) }
+  .btn--mnp    { background:var(--mnp) }    .btn--mnp:hover    { background:var(--mnp-hover) }
+  .btn--diag   { background:var(--diag) }   .btn--diag:hover   { background:var(--diag-hover) }
+  .btn--manage { background:var(--manage) } .btn--manage:hover { background:var(--manage-hover) }
+  .btn--account{ background:var(--account)} .btn--account:hover{ background:var(--account-hover) }
+  .btn--retail { background:var(--retail) } .btn--retail:hover { background:var(--retail-hover) }
+  .btn--salon  { background:var(--salon) }  .btn--salon:hover  { background:var(--salon-hover) }
+  .btn--other  { background:var(--other) }  .btn--other:hover  { background:var(--other-hover) }
+
+  /* 見出しの左線色 */
+  h2.fx{ border-left-color:var(--fx) }
+  h2.mnp{ border-left-color:var(--mnp) }
+  h2.diag{ border-left-color:var(--diag) }
+  h2.manage{ border-left-color:var(--manage) }
+  h2.account{ border-left-color:var(--account) }
+  h2.retail{ border-left-color:var(--retail) }
+  h2.salon{ border-left-color:var(--salon) }
+  h2.other{ border-left-color:var(--other) }
+  h2.favorites{ border-left-color:var(--fav) }
+
+  /* お気に入りスター（中央寄せ） */
+  .fav-toggle{
+    position:absolute; top:8px; right:8px;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.5);
+    display:grid; place-items:center; cursor:pointer; line-height:1; backdrop-filter:blur(2px);
+  }
+  .fav-toggle span{
+    font-size:18px; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.25);
+    transform:translateY(1px); display:block;
+  }
+  .fav-toggle.active{ background:#fff; border-color:#fff }
+  .fav-toggle.active span{ color:#f59e0b; text-shadow:none; transform:translateY(1px) }
+
+  /* 更新バッジ */
+  .badge{
+    position:absolute; left:6px; top:6px; padding:2px 6px; border-radius:999px; font-size:12px; font-weight:800;
+    background:#fff; color:#111;
+  }
+  .badge.up{ color:#0ea5a4 }
+  .badge.new{ color:#ef4444 }
+
+  /* 折りたたみ */
+  .section.collapsed > .section-body{ display:none }
+  .subsection.collapsed > .btn-grid{ display:none }
+
+  .hint{ font-size:.9em; color:#64748b; margin:2px 0 14px }
+  mark{ background:#fde68a; padding:0 .15em; border-radius:3px }
+</style>
+</head>
+<body>
+
+<h1>🚀 TOMツール一覧</h1>
+<small class="help">⭐：星でお気に入り／ジャンル・サブカテゴリーは見出しタップで開閉／ツール<strong>長押し</strong>で更新マーク（UP/NEW）切替。状態は自動保存。</small>
+
+<!-- 🔎 検索バー -->
+<div class="searchbar" role="search">
+  <div class="searchbox">
+    <span class="icon">🔎</span>
+    <input id="toolSearch" type="search" placeholder="ツール名で検索（/ でフォーカス、Esc でクリア）" autocomplete="off" />
+    <button id="searchClear" class="clear" title="クリア">×</button>
+  </div>
+  <div class="search-meta"><span class="count" id="searchCount">全件表示</span></div>
+</div>
+
+<!-- お気に入り -->
+<section id="sec-fav" class="section">
+  <h2 class="favorites"><span class="caret">▼</span> ⭐ お気に入り</h2>
+  <div class="section-body">
+    <div class="btn-grid" id="fav-grid"></div>
+    <div class="hint" id="fav-hint" style="display:none;">まだお気に入りはありません。各ツールの⭐をタップしてください。</div>
+  </div>
+</section>
+
+<!-- 副業診断 -->
+<section class="section">
+  <h2 class="diag"><span class="caret">▼</span> 🧩 副業診断</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="diag"><span class="caret">▼</span> 診断ツール</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomzeroichi.github.io/fukugyo-shindan" class="tool-btn btn--diag" data-title="副業適性ミニ診断（無料版）">副業適性ミニ診断（無料版）</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomzeroichi.github.io/fukugyo-shindan-pro" class="tool-btn btn--diag" data-title="副業適性精密診断Pro（有料版）">副業適性精密診断Pro（有料版）</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MNP -->
+<section class="section">
+  <h2 class="mnp"><span class="caret">▼</span> 📱 MNP関連</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="mnp"><span class="caret">▼</span> チェックツール</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/mnp-riekikeisan-test" class="tool-btn btn--mnp" data-title="MNP利益チェックツール">MNP利益チェックツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomzeroichi.github.io/mnpcheck-tool" class="tool-btn btn--mnp" data-title="MNP乗り換えチェック(GH版)">MNP乗り換えチェック(GH版)</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/mnpchecktool" class="tool-btn btn--mnp" data-title="MNP乗り換えチェック(WP版)">MNP乗り換えチェック(WP版)</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FX -->
+<section class="section">
+  <h2 class="fx"><span class="caret">▼</span> 📊 FX・トレード関連</h2>
+  <div class="section-body">
+
+    <div class="subsection">
+      <h3 class="fx"><span class="caret">▼</span> ユーティリティ</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/tft-lite/index.html" class="tool-btn btn--fx" data-title="ゴトー日カウントダウン">ゴトー日カウントダウン</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/indicator-calendar" class="tool-btn btn--fx" data-title="指標カレンダー">指標カレンダー</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3 class="fx"><span class="caret">▼</span> シミュレーター / 最適化</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/revenue-simulator" class="tool-btn btn--fx" data-title="収益シミュレーター(両建て)">収益シミュレーター(両建て)</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/bonus-optimization-tool" class="tool-btn btn--fx" data-title="2社間ボーナス最適化ツール">2社間ボーナス最適化ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/lot-keisan-test" class="tool-btn btn--fx" data-title="ロット計算ツール">ロット計算ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3 class="fx"><span class="caret">▼</span> ガイド / マニュアル</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/tft-cd-manual" class="tool-btn btn--fx" data-title="ゴトー日カウントダウンマニュアル">📖ゴトー日カウントダウンマニュアル</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/bonus-keisan-manual" class="tool-btn btn--fx" data-title="ボーナス最適化マニュアル">📖ボーナス最適化マニュアル</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- 物販・買取 -->
+<section class="section">
+  <h2 class="retail"><span class="caret">▼</span> 💼 物販・買取関連</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="retail"><span class="caret">▼</span> 計算・最適化</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/kaitori-tool-kanri" class="tool-btn btn--retail" data-title="買取利益計算ツール(管理者用)">買取利益計算ツール(管理者用)</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/kaitori-tool" class="tool-btn btn--retail" data-title="買取利益計算ツール">買取利益計算ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/pokeka-psa-simulator" class="tool-btn btn--retail" data-title="ポケカPSAシミュレーター">ポケカPSAシミュレーター</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="subsection">
+      <h3 class="retail"><span class="caret">▼</span> 管理ツール</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/pokeka-kanri-test" class="tool-btn btn--retail" data-title="ポケカ管理ツール">ポケカ管理ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 管理・計画 -->
+<section class="section">
+  <h2 class="manage"><span class="caret">▼</span> 📅 管理・計画ツール</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="manage"><span class="caret">▼</span> 管理ツール</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/chusenkanri-db-test" class="tool-btn btn--manage" data-title="抽選管理ツール">抽選管理ツール DB版</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="subsection">
+      <h3 class="manage"><span class="caret">▼</span> ダッシュボード系</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/kpitool_test" class="tool-btn btn--manage" data-title="収益KPIダッシュボード">収益KPIダッシュボード</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- アカウント -->
+<section class="section">
+  <h2 class="account"><span class="caret">▼</span> 👥 アカウント関連</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="account"><span class="caret">▼</span> 管理 / 生成</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/fukuakatool" class="tool-btn btn--account" data-title="複垢管理ツール">複垢管理ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/fukuaka-generator-test" class="tool-btn btn--account" data-title="複垢ジェネレーター">複垢ジェネレーター</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- サロン・投稿 -->
+<section class="section">
+  <h2 class="salon"><span class="caret">▼</span> 📝 サロン・投稿関連</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="salon"><span class="caret">▼</span> 投稿ジェネレーター</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/tomsalon_generator" class="tool-btn btn--salon" data-title="TOMサロン投稿ジェネレーター">TOMサロン投稿ジェネレーター</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- その他 -->
+<section class="section">
+  <h2 class="other"><span class="caret">▼</span> 🎮 その他</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="other"><span class="caret">▼</span> SNS・運用</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/tiktok-kanri" class="tool-btn btn--other" data-title="TikTok管理ツール">TikTok管理ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  const LS_FAV = 'tom_tools_favorites';
+  const LS_COL = 'tom_tools_collapsed';
+  const LS_SUB = 'tom_tools_subcollapsed';
+  const LS_BADGE = 'tom_tool_badges';
+
+  const favGrid = document.getElementById('fav-grid');
+  const favSection = document.getElementById('sec-fav');
+  const favHint = document.getElementById('fav-hint');
+
+  const $q = document.getElementById('toolSearch');
+  const $clear = document.getElementById('searchClear');
+  const $count = document.getElementById('searchCount');
+
+  const getFavs = ()=> JSON.parse(localStorage.getItem(LS_FAV)||'[]');
+  const setFavs = (arr)=> localStorage.setItem(LS_FAV, JSON.stringify(arr));
+  const getBadges = ()=> JSON.parse(localStorage.getItem(LS_BADGE)||'{}');
+  const setBadges = (obj)=> localStorage.setItem(LS_BADGE, JSON.stringify(obj));
+  const getCollapsed = ()=> JSON.parse(localStorage.getItem(LS_COL)||'{}');
+  const setCollapsed = (obj)=> localStorage.setItem(LS_COL, JSON.stringify(obj));
+  const getSubCollapsed = ()=> JSON.parse(localStorage.getItem(LS_SUB)||'{}');
+  const setSubCollapsed = (obj)=> localStorage.setItem(LS_SUB, JSON.stringify(obj));
+
+  // かな・カナを同一視 / NFKC
+  const toKanaBase = (s)=> s.replace(/[\u3041-\u3096]/g, ch => String.fromCharCode(ch.charCodeAt(0)+0x60));
+  const norm = (s)=> toKanaBase(s.normalize('NFKC').toLowerCase());
+  const escapeHtml = (s)=> s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  const highlight = (el, query)=>{
+    const raw = (el.dataset.title || el.textContent || '').trim();
+    if(!query){ el.textContent = raw; return; }
+    const nTitle = norm(raw), nQ = norm(query);
+    const i = nTitle.indexOf(nQ);
+    if(i<0){ el.textContent = raw; return; }
+    const before = raw.slice(0, i), mid = raw.slice(i, i+nQ.length), after = raw.slice(i+nQ.length);
+    el.innerHTML = `${escapeHtml(before)}<mark>${escapeHtml(mid)}</mark>${escapeHtml(after)}`;
+  };
+
+  // お気に入り
+  function initFavorites(){
+    const favs = new Set(getFavs());
+    document.querySelectorAll('.tool-card').forEach(card=>{
+      const a = card.querySelector('a.tool-btn');
+      const star = card.querySelector('.fav-toggle');
+      if(!a || !star) return;
+      const href = a.getAttribute('href');
+      star.classList.toggle('active', favs.has(href));
+      star.addEventListener('click', (e)=>{
+        e.stopPropagation(); e.preventDefault();
+        const now = new Set(getFavs());
+        if(now.has(href)){ now.delete(href); star.classList.remove('active'); }
+        else { now.add(href); star.classList.add('active'); }
+        setFavs([...now]);
+        renderFavorites();
+        runSearch();
+      });
+    });
+    renderFavorites();
+  }
+  function renderFavorites(){
+    const favs = getFavs();
+    favGrid.innerHTML = '';
+    if(favs.length===0){
+      favSection.classList.remove('collapsed');
+      favHint.style.display='block';
+      return;
+    }
+    favHint.style.display='none';
+    document.querySelectorAll('.tool-card').forEach(card=>{
+      const a = card.querySelector('a.tool-btn');
+      if(!a) return;
+      const href = a.getAttribute('href');
+      if(favs.includes(href)){
+        const clone = card.cloneNode(true);
+        const star = clone.querySelector('.fav-toggle');
+        if(star){
+          star.addEventListener('click',(e)=>{ e.stopPropagation(); e.preventDefault();
+            const now = new Set(getFavs());
+            if(now.has(href)) now.delete(href); else now.add(href);
+            setFavs([...now]); initFavorites(); runSearch();
+          });
+        }
+        bindLongPress(clone.querySelector('a.tool-btn'));
+        applyBadge(clone.querySelector('a.tool-btn'));
+        favGrid.appendChild(clone);
+      }
+    });
+  }
+
+  // 折りたたみ
+  function initCollapse(){
+    const col = getCollapsed();
+    document.querySelectorAll('section.section').forEach(sec=>{
+      const h2 = sec.querySelector('h2');
+      const body = sec.querySelector('.section-body');
+      if(!h2 || !body) return;
+      const key = 'sec:' + h2.textContent.trim();
+      if(col[key]){ sec.classList.add('collapsed'); h2.classList.add('collapsed'); }
+      h2.addEventListener('click', ()=>{
+        sec.classList.toggle('collapsed'); h2.classList.toggle('collapsed');
+        const cur = getCollapsed(); cur[key] = sec.classList.contains('collapsed'); setCollapsed(cur);
+      });
+    });
+  }
+  function initSubCollapse(){
+    const col = getSubCollapsed();
+    document.querySelectorAll('.subsection').forEach(sub=>{
+      const h3 = sub.querySelector('h3');
+      const grid = sub.querySelector('.btn-grid');
+      if(!h3 || !grid) return;
+      const key = 'sub:' + h3.textContent.trim();
+      if(col[key]){ sub.classList.add('collapsed'); h3.classList.add('collapsed'); }
+      h3.addEventListener('click', ()=>{
+        sub.classList.toggle('collapsed'); h3.classList.toggle('collapsed');
+        const cur = getSubCollapsed(); cur[key] = sub.classList.contains('collapsed'); setSubCollapsed(cur);
+      });
+    });
+  }
+
+  // 更新バッジ（長押し切替）
+  function parseDate(s){ const t = Date.parse(s); return isNaN(t)?null:new Date(t); }
+  function daysDiff(d1,d2){ return Math.floor((d1 - d2)/(1000*60*60*24)); }
+  function applyBadge(a){
+    if(!a) return;
+    a.parentElement.querySelectorAll('.badge').forEach(b=>b.remove());
+    const href = a.getAttribute('href');
+    const saved = getBadges()[href];
+    let kind = saved; // 'up' | 'new'
+    const explicit = (a.dataset.badge||'').toLowerCase();
+    if(!kind && (explicit==='up'||explicit==='new')) kind = explicit;
+    if(!kind && a.dataset.updated){
+      const d = parseDate(a.dataset.updated);
+      if(d){
+        const diff = daysDiff(new Date(), d);
+        if(diff<=7) kind='new'; else if(diff<=30) kind='up';
+      }
+    }
+    if(!kind || kind==='none') return;
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + (kind==='new'?'new':'up');
+    badge.textContent = (kind==='new'?'NEW':'UP');
+    a.parentElement.appendChild(badge);
+  }
+  function bindLongPress(a){
+    if(!a) return;
+    let timer=null; const href = a.getAttribute('href');
+    const start = ()=>{
+      timer = setTimeout(()=>{
+        const map = getBadges();
+        const cur = (map[href]||'none');
+        const next = cur==='none' ? 'up' : (cur==='up' ? 'new' : 'none');
+        if(next==='none') delete map[href]; else map[href]=next;
+        setBadges(map); applyBadge(a); renderFavorites(); runSearch();
+      },600);
+    };
+    const cancel = ()=>{ if(timer){ clearTimeout(timer); timer=null; } };
+    a.addEventListener('mousedown', start);
+    a.addEventListener('touchstart', start);
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>a.addEventListener(ev, cancel));
+  }
+  function initBadges(){
+    document.querySelectorAll('a.tool-btn').forEach(a=>{ applyBadge(a); bindLongPress(a); });
+  }
+
+  // ===== 検索（安定版） =====
+  let savedCollapse = null, savedSubCollapse = null;
+  function rememberCollapse(){ savedCollapse = getCollapsed(); savedSubCollapse = getSubCollapsed(); }
+  function restoreCollapse(){
+    if(savedCollapse) setCollapsed(savedCollapse);
+    if(savedSubCollapse) setSubCollapsed(savedSubCollapse);
+    document.querySelectorAll('section.section').forEach(sec=>{
+      const h2 = sec.querySelector('h2');
+      const key = 'sec:' + h2.textContent.trim();
+      const collapsed = !!getCollapsed()[key];
+      sec.classList.toggle('collapsed', collapsed);
+      h2.classList.toggle('collapsed', collapsed);
+      sec.style.display = '';
+    });
+    document.querySelectorAll('.subsection').forEach(sub=>{
+      const h3 = sub.querySelector('h3');
+      const key = 'sub:' + h3.textContent.trim();
+      const collapsed = !!getSubCollapsed()[key];
+      sub.classList.toggle('collapsed', collapsed);
+      h3.classList.toggle('collapsed', collapsed);
+      sub.style.display = '';
+    });
+  }
+  function openForSearch(){
+    document.querySelectorAll('section.section').forEach(sec=>{
+      sec.classList.remove('collapsed'); sec.querySelector('h2')?.classList.remove('collapsed'); sec.style.display='';
+    });
+    document.querySelectorAll('.subsection').forEach(sub=>{
+      sub.classList.remove('collapsed'); sub.querySelector('h3')?.classList.remove('collapsed'); sub.style.display='';
+    });
+  }
+  function runSearch(){
+    const q = $q.value.trim();
+    const nq = norm(q);
+
+    if(q) openForSearch();
+
+    const cards = Array.from(document.querySelectorAll('.tool-card'));
+    const seenHref = new Set();
+    let shownUnique = 0;
+
+    cards.forEach(card=>{
+      const a = card.querySelector('a.tool-btn'); if(!a) return;
+      const title = (a.dataset.title || a.textContent || '').trim();
+      const match = nq ? norm(title).includes(nq) : true;
+
+      card.style.display = match ? '' : 'none';
+      if(match){
+        highlight(a, q);
+        const href = a.getAttribute('href') || '';
+        if(!seenHref.has(href)){ seenHref.add(href); shownUnique++; }
+      }else{
+        a.textContent = title;
+      }
+    });
+
+    // サブセクション表示制御
+    document.querySelectorAll('.subsection').forEach(sub=>{
+      const anyVisible = Array.from(sub.querySelectorAll('.tool-card'))
+        .some(c => c.style.display !== 'none');
+      sub.style.display = (nq && !anyVisible) ? 'none' : '';
+    });
+    // セクション表示制御（お気に入り以外）
+    document.querySelectorAll('section.section').forEach(sec=>{
+      if(sec.id === 'sec-fav'){ sec.style.display=''; return; }
+      const anyVisible = Array.from(sec.querySelectorAll('.tool-card'))
+        .some(c => c.style.display !== 'none');
+      sec.style.display = (nq && !anyVisible) ? 'none' : '';
+    });
+
+    if(!q){ $count.textContent = '全件表示'; restoreCollapse(); }
+    else  { $count.textContent = `一致 ${shownUnique} 件`; }
+  }
+
+  // 入力イベント・ショートカット
+  function debounce(fn,ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args),ms); }; }
+  const debSearch = debounce(runSearch, 80);
+  $q.addEventListener('input', debSearch);
+  $q.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ e.preventDefault(); $q.value=''; runSearch(); $q.blur(); } });
+  $clear.addEventListener('click', ()=>{ $q.value=''; runSearch(); $q.focus(); });
+  window.addEventListener('keydown', (e)=>{
+    const tag = (document.activeElement && document.activeElement.tagName)||'';
+    if(e.key==='/' && tag!=='INPUT' && tag!=='TEXTAREA' && !e.metaKey && !e.ctrlKey){ e.preventDefault(); $q.focus(); }
+  });
+
+  // 初期化
+  initFavorites();
+  initCollapse();
+  initSubCollapse();
+  initBadges();
+  rememberCollapse();
+  runSearch();
+})();
+</script>
+</body>
+</html>
