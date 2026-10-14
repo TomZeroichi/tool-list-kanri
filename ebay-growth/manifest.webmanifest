@@ -1,0 +1,15 @@
+{
+  "name": "TOM eBay Growth｜12ヶ月ロードマップ",
+  "short_name": "TOM eBay Growth",
+  "description": "eBayの出品・販売・利益・評価目標を管理する12ヶ月ロードマップ",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2f6fc",
+  "theme_color": "#0752c9",
+  "lang": "ja",
+  "icons": [
+    {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
